@@ -1,0 +1,11 @@
+[package]
+name = "_2023_2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+
+[[bin]]
+name="test"
+path="src/test.rs"
