@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 #[derive(PartialEq, Debug)]
 struct Round {
     red: u32,
@@ -65,13 +67,37 @@ pub fn solve_one(bag: &Bag, str: &str) -> Option<u32> {
     Some(g.id)
 }
 
-pub fn solve(strs: Vec<&str>) -> u32 {
+pub fn min_bag_power(str: &str) -> u32 {
+    let g = parse_game(str).expect("Failed to parse game");
+
+    let mut b = Bag {
+        red: 0,
+        green: 0,
+        blue: 0,
+    };
+    for round in g.rounds {
+        b.red = max(round.red, b.red);
+        b.green = max(round.green, b.green);
+        b.blue = max(round.blue, b.blue);
+    }
+    bag_power(&b)
+}
+
+fn bag_power(b: &Bag) -> u32 {
+    b.red * b.green * b.blue
+}
+
+pub fn solve(strs: &Vec<&str>) -> u32 {
     let bag = Bag {
         red: 12,
         green: 13,
         blue: 14,
     };
     strs.iter().filter_map(|s| solve_one(&bag, s)).sum()
+}
+
+pub fn solve_part2(strs: &Vec<&str>) -> u32 {
+    strs.iter().map(|s| min_bag_power(s)).sum()
 }
 
 #[cfg(test)]
