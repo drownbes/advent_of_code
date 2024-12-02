@@ -1,5 +1,4 @@
 use core::str;
-use std::cmp::max;
 
 fn is_symbol(x: u8) -> bool {
     !x.is_ascii_digit() && x != b'.'
@@ -57,7 +56,7 @@ pub fn solve(strs: &Vec<&str>) -> u32 {
 
             if let Some(Obj::Symbol(s)) = prev_stack.last() {
                 if s.is_non_interesting(line_n, i) {
-                    //println!("Droping non interesting symbol: {:?} at cursor at:{}", s, i);
+                    println!("Droping non interesting symbol: {:?} at cursor at:{}", s, i);
                     prev_stack.pop();
                 }
             }
@@ -91,10 +90,10 @@ pub fn solve(strs: &Vec<&str>) -> u32 {
             if let Some(o) = obj {
                 let mut do_push = true;
 
-                //println!("-----");
-                //println!("new obj: {:?}", o);
-                //println!("stack: {:?}", stack);
-                //println!("prev_stack: {:?}", prev_stack);
+                println!("-----");
+                println!("new obj: {:?}", o);
+                println!("stack: {:?}", stack);
+                println!("prev_stack: {:?}", prev_stack);
 
                 match o {
                     Obj::Symbol(ref s) => {
@@ -133,10 +132,10 @@ pub fn solve(strs: &Vec<&str>) -> u32 {
                     stack.push(o);
                 }
 
-                //println!("After logic");
-                //println!("stack: {:?}", stack);
-                //println!("prev_stack: {:?}", prev_stack);
-                //println!("res {:?}", res);
+                println!("After logic");
+                println!("stack: {:?}", stack);
+                println!("prev_stack: {:?}", prev_stack);
+                println!("res {:?}", res);
             }
             i += 1;
         }
