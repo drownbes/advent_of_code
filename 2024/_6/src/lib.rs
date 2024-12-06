@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Direction {
@@ -82,7 +83,7 @@ fn unique_locations(guard: &Guard, strs: &[&str]) -> HashSet<(usize, usize)> {
     visited
 }
 
-fn has_cycle(guard: &Guard, strs: &Vec<Vec<u8>>) -> bool {
+fn has_cycle(guard: &Guard, strs: &[Vec<u8>]) -> bool {
     let mut visited: HashSet<Guard> = HashSet::new();
     let mut guard = guard.clone();
 
@@ -122,16 +123,17 @@ pub fn solve_part1(strs: &[&str]) -> usize {
 pub fn solve_part2(strs: &[&str]) -> usize {
     let guard = find_guard(strs).expect("Failed to find guard");
     let un_locs = unique_locations(&guard, strs);
-
-    un_locs
-        .iter()
-        .map(|(x, y)| {
-            let mut new_map: Vec<Vec<u8>> = strs
+    let map_v : Vec<Vec<u8>> = strs
                 .to_vec()
                 .clone()
                 .iter()
                 .map(|x| Vec::from(x.as_bytes()))
                 .collect();
+
+    un_locs
+        .par_iter()
+        .map(|(x, y)| {
+            let mut new_map: Vec<Vec<u8>> = map_v.clone();
             new_map[*y][*x] = b'#';
 
             if has_cycle(&guard, &new_map) {
