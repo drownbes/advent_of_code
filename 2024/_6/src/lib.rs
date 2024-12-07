@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use rayon::prelude::*;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Direction {
@@ -123,12 +123,12 @@ pub fn solve_part1(strs: &[&str]) -> usize {
 pub fn solve_part2(strs: &[&str]) -> usize {
     let guard = find_guard(strs).expect("Failed to find guard");
     let un_locs = unique_locations(&guard, strs);
-    let map_v : Vec<Vec<u8>> = strs
-                .to_vec()
-                .clone()
-                .iter()
-                .map(|x| Vec::from(x.as_bytes()))
-                .collect();
+    let map_v: Vec<Vec<u8>> = strs
+        .to_vec()
+        .clone()
+        .iter()
+        .map(|x| Vec::from(x.as_bytes()))
+        .collect();
 
     un_locs
         .par_iter()
