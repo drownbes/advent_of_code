@@ -19,19 +19,19 @@ type OpFn = fn(u64, u64) -> u64;
 fn check_possible<const N: usize>(value: u64, numbers: Vec<u64>, ops: [OpFn; N]) -> Option<u64> {
     let l = numbers.len() - 1;
 
-    let variations: Vec<Vec<OpFn>> = (0..l).map(|_| ops).multi_cartesian_product().collect();
+    let mut variations = (0..l).map(|_| ops).multi_cartesian_product();
 
-    for comb in variations {
-        let mut res = numbers[0];
-        for (i, op) in comb.iter().enumerate() {
-            res = op(res, numbers[i + 1]);
-        }
+    let r = variations.find_map(|comb| {
+        let f: u64 = *numbers.first().unwrap();
+        let z = numbers.iter().skip(1).zip(comb.iter());
+        let res: u64 = z.fold(f, |acc, (n, op)| op(acc, *n));
+
         if res == value {
             return Some(res);
         }
-    }
-
-    None
+        None
+    });
+    r
 }
 
 fn parse_puzzle(str: &str) -> (u64, Vec<u64>) {
