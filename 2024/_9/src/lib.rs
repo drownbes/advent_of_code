@@ -14,45 +14,38 @@ fn is_file(n: usize) -> bool {
 
 #[derive(Debug)]
 struct File {
-    content: Vec<u8>,
+    content: usize,
     id: usize,
 }
 
 impl fmt::Display for File {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s: &str = std::str::from_utf8(&self.content).unwrap();
-        write!(f, "{}", s)
+        write!(f, "{:?}", &self.content)
     }
 }
 
-fn checksum(chunk: &Vec<u8>, start: usize) -> usize {
-    let mut c: usize = 0;
-    for (i, digit) in chunk.iter().enumerate() {
-        c += as_number(*digit) * (start + i);
-    }
-    c
+fn checksum(id: usize, start: usize, end: usize) -> usize {
+    id * seq_sum(start, end)
 }
 
 impl File {
     fn new(i: usize, size: usize) -> File {
         let id = i / 2;
-        let id_str = format!("{}", id);
-        let content = id_str.repeat(size).as_bytes().to_vec();
+        let content = size;
         File { id, content }
     }
 
     fn content_left(&self) -> usize {
-        self.content.len()
+        self.content
     }
 
     fn checksum(&self, start: usize) -> usize {
-        checksum(&self.content, start)
+        checksum(self.id, start, start + self.content - 1)
     }
 
     fn move_n_digits(&mut self, start: usize, n: usize) -> usize {
-        let chunk: Vec<u8> = self.content.iter().rev().take(n).copied().collect();
-        self.content.truncate(self.content.len() - n);
-        checksum(&chunk, start)
+        self.content -= n;
+        checksum(self.id, start, start + n - 1)
     }
 }
 
@@ -71,28 +64,6 @@ fn parse(s: &str) -> Vec<Option<usize>> {
         is_file = !is_file;
     }
     res
-}
-
-pub fn p1(s: &str) -> usize {
-    let mut nums = parse(s);
-    let (mut left, mut right) = (0, nums.len() - 1);
-    while left < right {
-        while nums[left].is_some() {
-            left += 1;
-        }
-        while nums[right].is_none() {
-            right -= 1;
-        }
-        if left < right {
-            nums.swap(left, right);
-        }
-        left += 1;
-        right -= 1;
-    }
-    nums.into_iter()
-        .enumerate()
-        .filter_map(|(i, opt)| opt.map(|v| v * i))
-        .sum()
 }
 
 pub fn p2(s: &str) -> usize {
@@ -132,14 +103,10 @@ pub fn p2(s: &str) -> usize {
 }
 
 pub fn solve_part1(s: &str) -> usize {
-    p1(s)
-}
-
-pub fn solve_part1_(s: &str) -> u64 {
     let s = s.as_bytes();
     let mut i: usize = 0; // skip first file
     let mut j: usize = s.len() - 1;
-    let mut checksum: u64 = 0;
+    let mut checksum: usize = 0;
     let mut virtual_i = 0;
 
     let mut free_memory_left = 0;
@@ -166,7 +133,7 @@ pub fn solve_part1_(s: &str) -> u64 {
                 virtual_i + f.content_left() - 1
             );
             println!("File checksum: {}", a);
-            checksum += a as u64;
+            checksum += a;
             println!("Total checksum: {}", checksum);
             i += 1;
             if i >= j {
@@ -185,7 +152,7 @@ pub fn solve_part1_(s: &str) -> u64 {
                 start, end, file_to_move
             );
             let a = file_to_move.move_n_digits(start, file_to_move.content_left());
-            checksum += a as u64;
+            checksum += a;
             println!("checksum addition: {}, checksum after: {}", a, checksum);
             virtual_i = end + 1;
             if free_memory_left == 0 {
@@ -203,7 +170,7 @@ pub fn solve_part1_(s: &str) -> u64 {
             let end = virtual_i + free_memory_left - 1;
             println!("Filling [{},{}] with file: {}", start, end, file_to_move);
             let a = file_to_move.move_n_digits(start, free_memory_left);
-            checksum += a as u64;
+            checksum += a;
             println!("checksum addition: {}, checksum after: {}", a, checksum);
             virtual_i += free_memory_left;
             free_memory_left = 0;
@@ -211,7 +178,7 @@ pub fn solve_part1_(s: &str) -> u64 {
         }
     }
     dbg!(virtual_i, i, j);
-    checksum += file_to_move.checksum(virtual_i) as u64;
+    checksum += file_to_move.checksum(virtual_i);
     checksum
 }
 
@@ -238,6 +205,14 @@ mod tests {
     fn test_parse() {
         let r = parse(INPUT3);
         dbg!(r);
+    }
+
+    #[test]
+    fn test_comp() {
+        let r = p1(&INPUT3);
+        let m = solve_part1_(&INPUT3);
+        dbg!(r, m);
+        assert_eq!(r, m);
     }
 
     #[test]

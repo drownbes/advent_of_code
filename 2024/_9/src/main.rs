@@ -14,11 +14,11 @@ fn main() -> io::Result<()> {
     let v: Vec<String> = r.map(|x| x.expect("Failed to read file")).collect();
     let v: Vec<&str> = v.iter().map(String::as_str).collect();
     println!("Part1:");
-    let res = solve_part1(&v[0]);
+    let res = solve_part1(v[0]);
     println!("{}", res);
 
     println!("Part2:");
-    let res = solve_part2(&v[0]);
+    let res = solve_part2(v[0]);
     println!("{}", res);
 
     Ok(())
