@@ -113,71 +113,34 @@ pub fn solve_part1(s: &str) -> usize {
     let mut file_to_move = File::new(j, as_number(s[j]));
 
     while i < j && i != s.len() {
-        println!(" ");
-        println!(
-            "---- i:{} j:{} vi: {} fm: {} id: {} lm: {}-----",
-            i,
-            j,
-            virtual_i,
-            free_memory_left,
-            file_to_move.id,
-            file_to_move.content_left()
-        );
         if is_file(i) {
             let f = File::new(i, as_number(s[i]));
             let a = f.checksum(virtual_i);
-            println!(
-                "Reached file: {} [{}, {}]",
-                f,
-                virtual_i,
-                virtual_i + f.content_left() - 1
-            );
-            println!("File checksum: {}", a);
             checksum += a;
-            println!("Total checksum: {}", checksum);
             i += 1;
-            if i >= j {
-                break;
-            }
             free_memory_left = as_number(s[i]);
             virtual_i += f.content_left();
         } else if free_memory_left >= file_to_move.content_left() {
-            println!("free_memory_left >= left_to_move");
-
             let start = virtual_i;
             let end = virtual_i + file_to_move.content_left() - 1;
             free_memory_left -= file_to_move.content_left();
-            println!(
-                "Filling [{},{}] with file file:{}",
-                start, end, file_to_move
-            );
             let a = file_to_move.move_n_digits(start, file_to_move.content_left());
             checksum += a;
-            println!("checksum addition: {}, checksum after: {}", a, checksum);
             virtual_i = end + 1;
             if free_memory_left == 0 {
                 i += 1;
             }
             j -= 2;
-            if i >= j {
-                break;
-            }
-
             file_to_move = File::new(j, as_number(s[j]));
         } else {
-            println!("free_memory_left < left_to_move");
             let start = virtual_i;
-            let end = virtual_i + free_memory_left - 1;
-            println!("Filling [{},{}] with file: {}", start, end, file_to_move);
             let a = file_to_move.move_n_digits(start, free_memory_left);
             checksum += a;
-            println!("checksum addition: {}, checksum after: {}", a, checksum);
             virtual_i += free_memory_left;
             free_memory_left = 0;
             i += 1;
         }
     }
-    dbg!(virtual_i, i, j);
     checksum += file_to_move.checksum(virtual_i);
     checksum
 }
@@ -205,14 +168,6 @@ mod tests {
     fn test_parse() {
         let r = parse(INPUT3);
         dbg!(r);
-    }
-
-    #[test]
-    fn test_comp() {
-        let r = p1(&INPUT3);
-        let m = solve_part1_(&INPUT3);
-        dbg!(r, m);
-        assert_eq!(r, m);
     }
 
     #[test]
