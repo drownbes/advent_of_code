@@ -112,11 +112,17 @@ fn empty_locs(grid: &[Vec<char>]) -> Vec<(usize, usize)> {
         .collect()
 }
 
-fn find_char(c: char, grid: &[Vec<char>]) -> Option<(usize, usize)> {
-    grid.iter().enumerate().find_map(|(y, line)| {
+fn scan_iter(grid: &[Vec<char>]) -> impl Iterator<Item=(&char, usize, usize)> + '_ {
+    grid.iter().enumerate().flat_map(|(y, line)| {
         line.iter()
             .enumerate()
-            .find_map(|(x, ch)| if *ch == c { Some((x, y)) } else { None })
+            .map(move |(x, ch)| (ch, x, y))
+    })
+}
+
+fn find_char(c: char, grid: &[Vec<char>]) -> Option<(usize, usize)> {
+    scan_iter(grid).find_map(|(ch, x, y)| {
+        if *ch == c { Some((x, y)) } else { None }
     })
 }
 
