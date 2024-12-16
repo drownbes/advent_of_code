@@ -1,6 +1,4 @@
-use std::{
-    collections::{HashSet, LinkedList},
-};
+use std::collections::{HashSet, LinkedList};
 
 #[derive(Debug)]
 enum Mov {
@@ -284,11 +282,11 @@ impl WorldX2 {
         'outer: while let Some(step_locs) = check_locs.pop() {
             let mut all_locs_free = true;
             let mut next_step_locs: HashSet<(usize, usize)> = HashSet::new();
-            let mut locs_to_check : HashSet<(usize, usize)>= HashSet::from_iter(step_locs);
+            let mut locs_to_check: HashSet<(usize, usize)> = HashSet::from_iter(step_locs);
 
             let mut next_slice = HashSet::new();
             y = y.checked_add_signed(shift_y).unwrap();
-            let mut d : Vec<char> = vec![];
+            let mut d: Vec<char> = vec![];
             for l in locs_to_check.iter() {
                 d.push(self.grid[l.1][l.0]);
             }
@@ -460,7 +458,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^"#;
         while w.step().is_some() {
             w.draw_grid();
         }
-        
 
         assert_eq!(w.get_gps(), 2028);
     }
