@@ -1,8 +1,5 @@
 use std::{
     collections::{HashSet, LinkedList},
-    isize,
-    panic::Location,
-    usize,
 };
 
 #[derive(Debug)]
@@ -269,7 +266,6 @@ impl WorldX2 {
 
     fn step_vertical(&mut self) -> Option<()> {
         let m = self.moves.pop_front()?;
-        dbg!(&m);
         let (_, shift_y) = m.into();
         let (x, mut y) = (self.r.x, self.r.y);
         let mut stack: Vec<Vec<(usize, usize)>> = vec![];
@@ -278,61 +274,62 @@ impl WorldX2 {
         let new_y = y.checked_add_signed(shift_y).unwrap();
         let mut check_locs: Vec<Vec<(usize, usize)>> = vec![vec![(x, new_y)]];
 
-        self.draw_grid();
-
         if self.grid[new_y][x] == '.' {
-            dbg!("free move");
+            self.grid[y][x] = '.';
             self.r.y = new_y;
+            self.grid[new_y][x] = '@';
             return Some(());
         }
 
-        while let Some(step_locs) = check_locs.pop() {
-            let mut locs_to_check = step_locs;
+        'outer: while let Some(step_locs) = check_locs.pop() {
             let mut all_locs_free = true;
             let mut next_step_locs: HashSet<(usize, usize)> = HashSet::new();
+            let mut locs_to_check : HashSet<(usize, usize)>= HashSet::from_iter(step_locs);
+
             let mut next_slice = HashSet::new();
             y = y.checked_add_signed(shift_y).unwrap();
-
-            //println!("checking level: {} and locations: {:?}", y, locs_to_check);
-
-            while let Some(loc) = locs_to_check.pop() {
+            let mut d : Vec<char> = vec![];
+            for l in locs_to_check.iter() {
+                d.push(self.grid[l.1][l.0]);
+            }
+            while let Some(loc) = locs_to_check.iter().next().cloned() {
+                locs_to_check.remove(&loc);
                 let ch = self.grid[loc.1][loc.0];
-                dbg!(ch);
                 match ch {
                     '#' => {
                         stack.clear();
-                        break;
+                        check_locs.clear();
+                        break 'outer;
                     }
                     '[' => {
                         let next_y = loc.1.checked_add_signed(shift_y).unwrap();
                         next_step_locs.insert((loc.0, next_y));
-                        next_step_locs.insert((loc.0 + 1, next_y));
                         next_slice.insert(loc);
-                        next_slice.insert((loc.0 + 1, loc.1));
+                        let close = (loc.0 + 1, loc.1);
+                        if !next_slice.contains(&close) {
+                            locs_to_check.insert(close);
+                        }
                         all_locs_free = false;
                     }
                     ']' => {
                         let next_y = loc.1.checked_add_signed(shift_y).unwrap();
                         next_step_locs.insert((loc.0, next_y));
-                        next_step_locs.insert((loc.0 - 1, next_y));
                         next_slice.insert(loc);
-                        next_slice.insert((loc.0 - 1, loc.1));
+                        let close = (loc.0 - 1, loc.1);
+                        if !next_slice.contains(&close) {
+                            locs_to_check.insert(close);
+                        }
                         all_locs_free = false;
                     }
                     _ => {}
                 }
             }
-            //println!("on stack: {:?}", next_step_locs);
-
-            stack.push(next_slice.into_iter().collect());
-            check_locs.push(next_step_locs.into_iter().collect());
-
             if all_locs_free {
                 break;
             }
+            stack.push(next_slice.into_iter().collect());
+            check_locs.push(next_step_locs.into_iter().collect());
         }
-        //dbg!(&stack);
-        //dbg!(&self.r);
         if stack.len() > 1 {
             self.r.y = self.r.y.checked_add_signed(shift_y).unwrap();
         }
@@ -343,16 +340,12 @@ impl WorldX2 {
                 self.grid[obj.1][obj.0] = '.';
             }
         }
-
-        //self.draw_grid();
-
         Some(())
     }
 }
 
 impl CanStep for WorldX2 {
     fn step(&mut self) -> Option<()> {
-        println!("{:?}", self.moves.front());
         match self.moves.front() {
             Some(Mov::Right | Mov::Left) => self.step_hor(),
             Some(Mov::Up | Mov::Down) => self.step_vertical(),
@@ -363,16 +356,16 @@ impl CanStep for WorldX2 {
 
 pub fn solve_part1(strs: &[&str]) -> usize {
     let mut w = parse_input(strs);
-    w.draw_grid();
     while w.step().is_some() {}
     w.get_gps()
 }
 
 pub fn solve_part2(strs: &[&str]) -> usize {
     let mut w = x2_world(parse_input(strs));
-    w.draw_grid();
-    while w.step().is_some() {}
-    w.draw_grid();
+    let n = w.moves.len();
+    for _ in 0..n {
+        w.step();
+    }
     w.get_gps()
 }
 
@@ -427,12 +420,13 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^"#;
 ########
 #......#
 #......#
+#[]..[]#
 #.[][].#
-#..[]@.#
-#......#
+#..[]..#
+#...@..#
 ########
 
-^^^^v
+^^^^^
 "#;
 
     #[test]
@@ -462,21 +456,11 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^"#;
             grid: w.grid,
             moves: w.moves,
         };
-        w.draw_grid();
-        w.step();
 
-        w.draw_grid();
-        w.step();
-
-        w.draw_grid();
-        w.step();
-
-        w.draw_grid();
-        w.step();
-
-        w.draw_grid();
-        w.step();
-        w.draw_grid();
+        while w.step().is_some() {
+            w.draw_grid();
+        }
+        
 
         assert_eq!(w.get_gps(), 2028);
     }
@@ -486,13 +470,9 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^"#;
         let input = read_input(EXAMPLE_BIG);
         let mut w = x2_world(parse_input(&input));
         w.draw_grid();
-        w.step();
-        w.step();
-        w.step();
-        w.step();
-        w.step();
-
-        w.draw_grid();
+        while w.step().is_some() {
+            w.draw_grid();
+        }
 
         assert_eq!(w.get_gps(), 2028);
     }
