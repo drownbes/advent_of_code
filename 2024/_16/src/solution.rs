@@ -1,7 +1,6 @@
 use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashMap, HashSet},
-    usize,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -77,53 +76,38 @@ impl Dir {
     }
 }
 
-fn possible_moves(p: &Pos, grid: &[Vec<char>]) -> Vec<Move> {
+fn possible_moves<'a>(p: &'a Pos, grid: &'a [Vec<char>]) -> impl Iterator<Item = Move> + 'a {
     let moves = [Dir::Up, Dir::Down, Dir::Left, Dir::Right];
-    moves
-        .iter()
-        .filter_map(|dir| {
-            let (shift_x, shift_y) = dir.get_shift();
-            let new_x = p.x.checked_add_signed(shift_x)?;
-            let new_y = p.y.checked_add_signed(shift_y)?;
-            match grid[new_y][new_x] {
-                '#' => None,
-                _ => Some(Move::new(
-                    p,
-                    Pos {
-                        dir: *dir,
-                        x: new_x,
-                        y: new_y,
-                    },
-                )),
-            }
-        })
-        .collect()
+    moves.into_iter().filter_map(|dir| {
+        let (shift_x, shift_y) = dir.get_shift();
+        let new_x = p.x.checked_add_signed(shift_x)?;
+        let new_y = p.y.checked_add_signed(shift_y)?;
+        match grid[new_y][new_x] {
+            '#' => None,
+            _ => Some(Move::new(
+                p,
+                Pos {
+                    dir,
+                    x: new_x,
+                    y: new_y,
+                },
+            )),
+        }
+    })
 }
 
-fn empty_locs(grid: &[Vec<char>]) -> Vec<(usize, usize)> {
+fn empty_locs_iter(grid: &[Vec<char>]) -> impl Iterator<Item = (usize, usize)> + '_ {
+    scan_iter(grid).filter_map(|(ch, x, y)| if *ch != '#' { Some((x, y)) } else { None })
+}
+
+fn scan_iter(grid: &[Vec<char>]) -> impl Iterator<Item = (&char, usize, usize)> + '_ {
     grid.iter()
         .enumerate()
-        .flat_map(|(y, line)| {
-            line.iter()
-                .enumerate()
-                .flat_map(|(x, ch)| if *ch != '#' { Some((x, y)) } else { None })
-                .collect::<Vec<(usize, usize)>>()
-        })
-        .collect()
-}
-
-fn scan_iter(grid: &[Vec<char>]) -> impl Iterator<Item=(&char, usize, usize)> + '_ {
-    grid.iter().enumerate().flat_map(|(y, line)| {
-        line.iter()
-            .enumerate()
-            .map(move |(x, ch)| (ch, x, y))
-    })
+        .flat_map(|(y, line)| line.iter().enumerate().map(move |(x, ch)| (ch, x, y)))
 }
 
 fn find_char(c: char, grid: &[Vec<char>]) -> Option<(usize, usize)> {
-    scan_iter(grid).find_map(|(ch, x, y)| {
-        if *ch == c { Some((x, y)) } else { None }
-    })
+    scan_iter(grid).find_map(|(ch, x, y)| if *ch == c { Some((x, y)) } else { None })
 }
 
 fn trace_paths(parent: &HashMap<Pos, Vec<Pos>>, target: Pos, start: Pos) -> usize {
@@ -149,8 +133,7 @@ fn trace_paths(parent: &HashMap<Pos, Vec<Pos>>, target: Pos, start: Pos) -> usiz
 
 fn shortes_path(start: Pos, goal: (usize, usize), grid: &[Vec<char>]) -> Option<(usize, usize)> {
     let mut dist: HashMap<Pos, usize> = HashMap::new();
-    let locs = empty_locs(grid);
-    for loc in locs {
+    for loc in empty_locs_iter(grid) {
         dist.insert(
             Pos {
                 dir: Dir::Up,
@@ -203,15 +186,19 @@ fn shortes_path(start: Pos, goal: (usize, usize), grid: &[Vec<char>]) -> Option<
                 cost: cost + mv.cost,
                 p: mv.p,
             };
-            if next.cost < *dist.get(&next.p).unwrap() {
-                heap.push(next);
-                dist.insert(next.p, next.cost);
-                parents.insert(next.p, vec![p]);
-            } else if next.cost == *dist.get(&next.p).unwrap() {
-                parents
-                    .entry(next.p)
-                    .and_modify(|x| x.push(p))
-                    .or_insert(vec![p]);
+            match next.cost.cmp(dist.get(&next.p).unwrap()) {
+                Ordering::Less => {
+                    heap.push(next);
+                    dist.insert(next.p, next.cost);
+                    parents.insert(next.p, vec![p]);
+                }
+                Ordering::Equal => {
+                    parents
+                        .entry(next.p)
+                        .and_modify(|x| x.push(p))
+                        .or_insert(vec![p]);
+                }
+                Ordering::Greater => {}
             }
         }
     }
