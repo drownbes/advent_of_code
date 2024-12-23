@@ -32,8 +32,7 @@ fn calc_nth_secret(secret: u64, n: u64) -> u64 {
 }
 
 fn price_from_secret(secret: u64) -> isize {
-    let ss = secret.to_string();
-    ss.chars().last().unwrap().to_string().parse().unwrap()
+    (secret % 10) as isize
 }
 
 fn prices(secret: u64, n: usize) -> Vec<(isize, isize)> {
@@ -53,14 +52,12 @@ fn prices(secret: u64, n: usize) -> Vec<(isize, isize)> {
 
 #[derive(Debug, Clone)]
 struct Prepare {
-    secret: Vec<u64>,
-    seq_price_hm: HashMap<String, isize>,
+    seq_price_hm: HashMap<Vec<isize>, isize>,
 }
 
 impl Prepare {
-    fn new(secret: u64) -> Prepare {
+    fn new() -> Prepare {
         Prepare {
-            secret: vec![secret],
             seq_price_hm: HashMap::new(),
         }
     }
@@ -68,20 +65,16 @@ impl Prepare {
 
 fn prices_with_seqs(secret: u64) -> Prepare {
     let prs = prices(secret, 2000);
-    prs.windows(4).fold(Prepare::new(secret), |mut acc, v| {
+    prs.windows(4).fold(Prepare::new(), |mut acc, v| {
         let p = v[3];
-        let seq: Vec<String> = v.iter().map(|(_, d)| d.to_string()).collect();
-        let seq = seq.join(",");
+        let seq: Vec<isize> = v.iter().map(|(_, d)| *d).collect();
         acc.seq_price_hm.entry(seq.clone()).or_insert_with(|| p.0);
         acc
     })
 }
 
 fn merge(p0: &Prepare, p1: &Prepare) -> Prepare {
-    let mut max_sum = 0;
-    let mut max_seq = "";
-
-    let mut res: HashSet<(String, isize)> = HashSet::new();
+    let mut res: HashMap<Vec<isize>, isize> = HashMap::new();
 
     for (seq, price) in p0.seq_price_hm.iter() {
         let mut sum = *price;
@@ -90,12 +83,7 @@ fn merge(p0: &Prepare, p1: &Prepare) -> Prepare {
             sum += price1;
         }
 
-        res.insert((seq.to_string(), sum));
-
-        if sum > max_sum {
-            max_seq = seq;
-            max_sum = sum;
-        }
+        res.insert(seq.clone(), sum);
     }
 
     for (seq, price) in p1.seq_price_hm.iter() {
@@ -105,25 +93,10 @@ fn merge(p0: &Prepare, p1: &Prepare) -> Prepare {
             sum += price0;
         }
 
-        res.insert((seq.to_string(), sum));
-
-        if sum > max_sum {
-            max_seq = seq;
-            max_sum = sum;
-        }
-    }
-    let mut res_hm: HashMap<String, isize> = HashMap::new();
-
-    for (k, v) in res.iter() {
-        res_hm.insert(k.to_string(), *v);
+        res.insert(seq.clone(), sum);
     }
 
-    let mut comp_secret = p0.secret.clone();
-    comp_secret.extend(p1.secret.iter());
-    Prepare {
-        secret: comp_secret,
-        seq_price_hm: res_hm,
-    }
+    Prepare { seq_price_hm: res }
 }
 
 pub fn solve_part1(strs: &[&str]) -> u64 {
@@ -140,8 +113,6 @@ pub fn solve_part2(strs: &[&str]) -> isize {
         .collect();
 
     let v = v.iter().fold(v[0].clone(), |acc, x| merge(&acc, x));
-
-    dbg!(v.seq_price_hm.len());
 
     let max = v.seq_price_hm.values().max();
     *max.unwrap()
