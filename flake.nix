@@ -21,6 +21,7 @@
           toolchain
           aoc-cli
           just
+          mermaid-cli
         ];
       };
     });
