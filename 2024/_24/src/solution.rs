@@ -1,7 +1,6 @@
 use core::panic;
 use std::collections::{BTreeMap, LinkedList};
 
-
 pub fn solve_part1(strs: &[&str]) -> u64 {
     let mut r = parse_input(strs);
     r.process_wiring();
@@ -20,12 +19,11 @@ pub fn solve_part2(strs: &[&str]) -> usize {
     0
 }
 
-
 #[derive(Debug)]
 enum GateOp {
     And,
     Or,
-    Xor
+    Xor,
 }
 
 #[derive(Debug)]
@@ -33,50 +31,71 @@ struct Gate {
     op: GateOp,
     a: String,
     b: String,
-    out: String
+    out: String,
 }
-
 
 #[derive(Debug)]
 struct Wiring {
-    inputs:  BTreeMap<String, bool>,
-    gates: LinkedList<Gate>
+    inputs: BTreeMap<String, bool>,
+    gates: LinkedList<Gate>,
 }
 
-fn parse_input(strs : &[&str]) -> Wiring {
+fn parse_input(strs: &[&str]) -> Wiring {
     let mut s = strs.split(|x| x.is_empty());
 
-    let inputs : BTreeMap<String, bool> = s.next().unwrap().iter().map(|s| {
-        let mut m = s.split(":").map(str::trim);
-        let name =  m.next().unwrap().to_string();
-        let state = match m.next().unwrap() {
-            "1" => true,
-            "0" => false,
-            _ => panic!("not 1 or 0")
-        };
-        (name, state)
-    }).collect();
+    let inputs: BTreeMap<String, bool> = s
+        .next()
+        .unwrap()
+        .iter()
+        .map(|s| {
+            let mut m = s.split(":").map(str::trim);
+            let name = m.next().unwrap().to_string();
+            let state = match m.next().unwrap() {
+                "1" => true,
+                "0" => false,
+                _ => panic!("not 1 or 0"),
+            };
+            (name, state)
+        })
+        .collect();
 
-    let gates : LinkedList<Gate> = s.next().unwrap().iter().map(|s| {
-        let mut m = s.split_whitespace();
-        let a = m.next().unwrap().to_string();
-        let op = m.next().unwrap();
-        let b = m.next().unwrap().to_string();
-        m.next();
-        let out = m.next().unwrap().to_string();
-        
-        match op {
-            "AND" => Gate { a, b, out, op: GateOp::And },
-            "OR" => Gate { a, b, out, op: GateOp::Or },
-            "XOR" => Gate { a, b, out, op: GateOp::Xor },
-            _ => panic!("Unknown gate")
-        }
-    }).collect();
+    let gates: LinkedList<Gate> = s
+        .next()
+        .unwrap()
+        .iter()
+        .map(|s| {
+            let mut m = s.split_whitespace();
+            let a = m.next().unwrap().to_string();
+            let op = m.next().unwrap();
+            let b = m.next().unwrap().to_string();
+            m.next();
+            let out = m.next().unwrap().to_string();
 
-    Wiring {
-        inputs,
-        gates
-    }
+            match op {
+                "AND" => Gate {
+                    a,
+                    b,
+                    out,
+                    op: GateOp::And,
+                },
+                "OR" => Gate {
+                    a,
+                    b,
+                    out,
+                    op: GateOp::Or,
+                },
+                "XOR" => Gate {
+                    a,
+                    b,
+                    out,
+                    op: GateOp::Xor,
+                },
+                _ => panic!("Unknown gate"),
+            }
+        })
+        .collect();
+
+    Wiring { inputs, gates }
 }
 
 impl Wiring {
@@ -88,7 +107,7 @@ impl Wiring {
                 let out = match gate.op {
                     GateOp::And => *a && *b,
                     GateOp::Or => *a || *b,
-                    GateOp::Xor => *a ^ *b
+                    GateOp::Xor => *a ^ *b,
                 };
                 self.inputs.insert(gate.out, out);
             } else {
@@ -98,22 +117,25 @@ impl Wiring {
     }
 
     fn get_number(&self) -> u64 {
-        let mut c : u64 = 0;
-        let z_vals : Vec<u64> = self.inputs.iter().filter_map(|(k, v)| {
-            if k.starts_with("z") {
-                Some(*v as u64)
-            } else {
-                None
-            }
-        }).collect();
+        let mut c: u64 = 0;
+        let z_vals: Vec<u64> = self
+            .inputs
+            .iter()
+            .filter_map(|(k, v)| {
+                if k.starts_with("z") {
+                    Some(*v as u64)
+                } else {
+                    None
+                }
+            })
+            .collect();
         for (i, v) in z_vals.into_iter().enumerate() {
-            let i : u64 = i.try_into().unwrap();
-            c+= v * (2_u64.pow(i.try_into().unwrap()));
+            let i: u64 = i.try_into().unwrap();
+            c += v * (2_u64.pow(i.try_into().unwrap()));
         }
         c
     }
 }
-
 
 #[cfg(test)]
 mod tests {
