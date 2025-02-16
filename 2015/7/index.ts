@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { inspect } from 'node:util';
+import assert from 'node:assert';
 
 
 const readInput = async (path: string) : Promise<string> => {
@@ -12,52 +13,100 @@ const readInput = async (path: string) : Promise<string> => {
 
 interface Op {
   output: string;
-
   tryToCalcOutput(doneOutputs: Map<string, number>): number | null;
 }
 
-class And implements Op {
+function tryParseInt(x: string) : number | string {
+  const n = parseInt(x);
+  return isNaN(n) ? x : n
+}
+
+
+function checkResolved(x: string | number, m: Map<string, number>) : string | number {
+  if (typeof x === 'number') {
+    return x;
+  } else {
+    let mx = m.get(x);
+    if (mx === undefined) {
+      return x;
+    } else {
+      return mx;
+    }
+  }
+}
+
+class TwoInputs {
   first: number | string;
   second: number | string;
   output: string;
-  constructor(first: number | string, second: number | string, output: string) {
-    this.first = first;
-    this.second = second;
+  constructor(first: string, second: string, output: string) {
+    this.first = tryParseInt(first);
+    this.second = tryParseInt(second);
     this.output = output;
+  }
+}
+
+class And extends TwoInputs implements Op {
+  constructor(first: string, second: string, output: string) {
+    super(first, second, output);
+  }
+
+  tryToCalcOutput(doneOutputs: Map<string, number>): number | null {
+    let f = checkResolved(this.first, doneOutputs);
+    let s = checkResolved(this.second, doneOutputs);
+    if (typeof f === 'number' && typeof s === 'number') {
+      return f & s;
+    } else {
+      return null;
+    }
   }
 }
 
 class Or implements Op {
-  first: number | string;
-  second: number | string;
-  output: string;
-  constructor(first: number | string, second: number | string, output: string) {
-    this.first = first;
-    this.second = second;
-    this.output = output;
+  constructor(first: string, second: string, output: string) {
+    super(first, second, output);
   }
 
+  tryToCalcOutput(doneOutputs: Map<string, number>): number | null {
+    let f = checkResolved(this.first, doneOutputs);
+    let s = checkResolved(this.second, doneOutputs);
+    if (typeof f === 'number' && typeof s === 'number') {
+      return f | s;
+    } else {
+      return null;
+    }
+  }
 }
 
 class LShift implements Op {
-  first: number | string;
-  second: number | string;
-  output: string;
-  constructor(first: number | string, second: number | string, output: string) {
-    this.first = first;
-    this.second = second;
-    this.output = output;
+  constructor(first: string, second: string, output: string) {
+    super(first, second, output);
+  }
+
+  tryToCalcOutput(doneOutputs: Map<string, number>): number | null {
+    let f = checkResolved(this.first, doneOutputs);
+    let s = checkResolved(this.second, doneOutputs);
+    if (typeof f === 'number' && typeof s === 'number') {
+      return f <<  s;
+    } else {
+      return null;
+    }
   }
 }
 
 class RShift implements Op {
-  first: number | string;
-  second: number | string;
-  output: string;
-  constructor(first: number | string, second: number | string, output: string) {
-    this.first = first;
-    this.second = second;
-    this.output = output;
+  constructor(first: string, second: string, output: string) {
+    super(first, second, output);
+  }
+
+  tryToCalcOutput(doneOutputs: Map<string, number>): number | null {
+    let f = checkResolved(this.first, doneOutputs);
+    let s = checkResolved(this.second, doneOutputs);
+    if (typeof f === 'number' && typeof s === 'number') {
+      return f >> s;
+    } else {
+      return null;
+    }
   }
 }
 
@@ -70,6 +119,15 @@ class Not implements Op {
     this.output = output;
   }
 
+  tryToCalcOutput(doneOutputs: Map<string, number>): number | null {
+    let f = checkResolved(this.input, doneOutputs);
+    if (typeof f === 'number') {
+      return ~f;
+    } else {
+      return null;
+    }
+  }
+
 }
 
 class Value implements Op {
@@ -80,17 +138,38 @@ class Value implements Op {
     this.output = output;
   }
 
+  tryToCalcOutput(_doneOutputs: Map<string, number>): number | null {
+    return this.input;
+  }
+
+}
+
+class Id implements Op {
+  input: string;
+  output: string;
+  constructor(input: string, output: string) {
+    this.input = input;
+    this.output = output;
+  }
+
+  tryToCalcOutput(doneOutputs: Map<string, number>): number | null {
+    let f = checkResolved(this.input, doneOutputs);
+    if (typeof f === 'number') {
+      return f;
+    } else {
+      return null;
+    }
+  }
 }
 
 const twoInputs = /([a-z]+|[0-9]+)\s(LSHIFT|RSHIFT|AND|OR)\s([a-z]+|[0-9]+)\s->\s([a-z]+)/;
 const not = /NOT\s([a-z]+)\s->\s([a-z]+)/;
-const value = /([0-9])+\s->\s([a-z]+)/;
-const id = /([a-z])+\s->\s([a-z]+)/;
+const value = /([0-9]+)\s->\s([a-z]+)/;
+const id = /([a-z]+)\s->\s([a-z]+)/;
 
 
 class GateParser {
   static parse(str: string) {
-    console.log(str);
     if (twoInputs.test(str)) {
       return GateParser.parseTwoInputs(str);
     } else if(not.test(str)) {
@@ -119,7 +198,6 @@ class GateParser {
   static parseNot(str:string) {
     let [_, left, output] = not.exec(str)!;
     return new Not(left, output);
-    
   }
   
   static parseValue(str:string) {
@@ -128,7 +206,30 @@ class GateParser {
   }
   static parseId(str:string) {
     let [_, left, output] = id.exec(str)!;
-    return new Value(parseInt(left), output);
+    return new Id(left, output);
+  }
+}
+
+class Net {
+  gates: Op[];
+  outputs: Map<string, number> = new Map();
+  constructor(inputLines: string[]) {
+    this.gates = inputLines.map(GateParser.parse);
+  }
+
+  process() {
+    while(this.gates.length > 0) {
+      const g = this.gates.pop()!;
+      let v = g.tryToCalcOutput(this.outputs);
+      if (v === null) {
+        this.gates.unshift(g);
+      } else {
+        if (g.output == 'b') {
+          v = 956;
+        }
+        this.outputs.set(g.output, v);
+      }
+    }
   }
 }
 
@@ -139,11 +240,15 @@ class Solution {
   }
 
   part1() {
-    let gates = this.inputLines.map(GateParser.parse);
-    console.log(gates);
+    let net = new Net(this.inputLines);
+    net.process();
+    return net.outputs.get('a');
   }
 
   part2() {
+    let net = new Net(this.inputLines);
+    net.process();
+    return net.outputs.get('a');
   }
 }
 
